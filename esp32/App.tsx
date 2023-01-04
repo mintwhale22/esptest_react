@@ -12,7 +12,7 @@ import {
     Button,
     PermissionsAndroid,
     View,
-    Text,
+    Text, Image,
 } from 'react-native';
 
 import base64 from 'react-native-base64';
@@ -55,8 +55,36 @@ export default function App() {
     //What device is connected?
     const [connectedDevice, setConnectedDevice] = useState<Device>();
 
-    const [message, setMessage] = useState('Nothing Yet');
-    const [boxvalue, setBoxValue] = useState(false);
+    const [message, setMessage] = useState('연결안됨');
+    const [ppm, setPpm] = useState("");
+    const [sppm, setSppm] = useState("");
+    const [tem, setTem] = useState("");
+    const [hum, setHum] = useState("");
+
+    const setDateMassage = (value) => {
+        const array = value.split("|");
+        if(array.length >= 3) {
+            setPpm(array[0]);
+
+            if(array[0]) {
+                const ppm = parseInt(array[0]);
+                let isppm = "아주나쁨";
+                if(ppm <= 250) {
+                    isppm = "아주좋음";
+                } else if (ppm <= 350) {
+                    isppm = "좋음";
+                } else if (ppm <= 400) {
+                    isppm = "보통";
+                } else if (ppm <= 600) {
+                    isppm = "나쁨";
+                }
+                setSppm(isppm);
+            }
+
+            setTem(array[1]);
+            setHum(array[2]);
+        }
+    }
 
     // Scans availbale BLT Devices and then call connectDevice
     async function scanDevices() {
@@ -78,7 +106,7 @@ export default function App() {
                     console.warn(error);
                 }
 
-                if (scannedDevice && scannedDevice.name == 'InnoCon ICBT-01') {
+                if (scannedDevice && scannedDevice.name == 'HomeCoffee HCBT-01') {
                     BLTManager.stopDeviceScan();
                     connectDevice(scannedDevice);
                 }
@@ -101,9 +129,10 @@ export default function App() {
                 BLTManager.cancelTransaction('messagetransaction');
                 BLTManager.cancelTransaction('nightmodetransaction');
 
-                BLTManager.cancelDeviceConnection(connectedDevice.id).then(() =>
-                    console.log('DC completed'),
-                );
+                BLTManager.cancelDeviceConnection(connectedDevice.id).then(() => {
+                    console.log('DC completed');
+                    setMessage("연결안됨");
+                });
             }
 
             const connectionStatus = await connectedDevice.isConnected();
@@ -123,7 +152,7 @@ export default function App() {
             .then(device => {
                 setConnectedDevice(device);
                 setIsConnected(true);
-
+                setMessage("연결됨");
                 return device.discoverAllServicesAndCharacteristics();
             })
             .then(device => {
@@ -150,7 +179,7 @@ export default function App() {
                                 device
                                     .readCharacteristicForService(serviceuuid, messageuuid)
                                     .then(valenc => {
-                                        setMessage(base64.decode(valenc?.value));
+                                        setDateMassage(base64.decode(valenc?.value));
                                     });
 
 
@@ -162,7 +191,7 @@ export default function App() {
                                     messageuuid,
                                     (error, characteristic) => {
                                         if (characteristic?.value != null) {
-                                            setMessage(base64.decode(characteristic?.value));
+                                            setDateMassage(base64.decode(characteristic?.value));
                                             console.log(
                                                 'Message update received: ',
                                                 base64.decode(characteristic?.value),
@@ -186,8 +215,24 @@ export default function App() {
 
             {/* Title */}
             <View style={styles.rowView}>
-                <Text style={styles.titleText}>BLE Example</Text>
+                <Text style={styles.titleText}>맑은여울 - 수질검사</Text>
             </View>
+            {isConnected && (
+                <View style={{margin: 10, padding: 10, borderWidth: 2, borderRadius: 15, borderColor: "#466dcc"}}>
+                    <View style={{flexDirection : "row", alignItems: "center"}}>
+                        <Image source={require('./assets/water.png')} style={{width: 30, height: 30}}/>
+                        <Text style={{...styles.text, marginStart: 10, fontSize: 20, lineHeight: 24}}>{sppm} ({ppm}ppm)</Text>
+                    </View>
+                    <View style={{flexDirection : "row", alignItems: "center"}}>
+                        <Image source={require('./assets/tem.png')} style={{width: 30, height: 30}}/>
+                        <Text style={{...styles.text, marginStart: 10, fontSize: 20, lineHeight: 24}}>{tem}°C</Text>
+                    </View>
+                    <View style={{flexDirection : "row", alignItems: "center"}}>
+                        <Image source={require('./assets/tum.png')} style={{width: 30, height: 30}}/>
+                        <Text style={{...styles.text, marginStart: 10, fontSize: 20, lineHeight: 24}}>{hum}%</Text>
+                    </View>
+                </View>
+                )}
 
             <View style={{paddingBottom: 20}}></View>
 
@@ -196,7 +241,7 @@ export default function App() {
                 <TouchableOpacity style={{width: 120}}>
                     {!isConnected ? (
                         <Button
-                            title="Connect"
+                            title="기기연결"
                             onPress={() => {
                                 scanDevices();
                             }}
@@ -204,7 +249,7 @@ export default function App() {
                         />
                     ) : (
                         <Button
-                            title="Disonnect"
+                            title="연결취소"
                             onPress={() => {
                                 disconnectDevice();
                             }}
