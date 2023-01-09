@@ -17,8 +17,6 @@ import {
 
 import base64 from 'react-native-base64';
 
-import CheckBox from '@react-native-community/checkbox';
-
 import {BleManager, Device} from 'react-native-ble-plx';
 import {styles} from './Styles/styles';
 import {LogBox} from 'react-native';
